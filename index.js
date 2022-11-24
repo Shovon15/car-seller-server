@@ -25,7 +25,7 @@ async function run() {
     try {
         const usersCollection = client.db("carResaleMarket").collection("users");
         const categoryCollection = client.db("carResaleMarket").collection("carCategories");
-        // const productsCollection = client.db("carResaleMarket").collection("products");
+        const productsCollection = client.db("carResaleMarket").collection("products");
         // ---------------------products api-----------------------------
 
         app.get("/carCategory", async (req, res) => {
@@ -33,6 +33,25 @@ async function run() {
             const result = await categoryCollection.find(filter).toArray();
             res.send(result);
         });
+
+        app.get("/products/:category", async (req, res) => {
+            const category = req.params.category;
+            // console.log(category);
+            // const category = "sedan";
+            const filter = { categoryName: category };
+            const result = await productsCollection.find(filter).toArray();
+            res.send(result);
+        });
+
+        app.get("/products/:category/:_id", async (req, res) => {
+            const category = req.params.category;
+            const id = req.params._id;
+            console.log(category, id);
+            const filter = { _id: ObjectId(id) };
+            const result = await productsCollection.findOne(filter);
+            res.send(result);
+        });
+
         // ---------------------users api-----------------------------
         app.post("/users", async (req, res) => {
             const user = req.body;
