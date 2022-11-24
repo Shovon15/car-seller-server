@@ -20,6 +20,32 @@ const client = new MongoClient(uri, {
     serverApi: ServerApiVersion.v1,
 });
 // console.log(uri);
+
+async function run() {
+    try {
+        const usersCollection = client.db("carResaleMarket").collection("users");
+        const categoryCollection = client.db("carResaleMarket").collection("carCategories");
+        // const productsCollection = client.db("carResaleMarket").collection("products");
+        // ---------------------products api-----------------------------
+
+        app.get("/carCategory", async (req, res) => {
+            const filter = {};
+            const result = await categoryCollection.find(filter).toArray();
+            res.send(result);
+        });
+        // ---------------------users api-----------------------------
+        app.post("/users", async (req, res) => {
+            const user = req.body;
+            console.log(user);
+            // TODO: make sure you do not enter duplicate user email
+            // only insert users if the user doesn't exist in the database
+            const result = await usersCollection.insertOne(user);
+            res.send(result);
+        });
+    } finally {
+    }
+}
+run().catch(console.log);
 // ------------------------
 app.get("/", async (req, res) => {
     res.send("car resale server is running");
