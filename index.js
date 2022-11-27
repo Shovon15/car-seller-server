@@ -27,6 +27,16 @@ async function run() {
         const categoryCollection = client.db("carResaleMarket").collection("carCategories");
         const productsCollection = client.db("carResaleMarket").collection("products");
         const bookingsCollection = client.db("carResaleMarket").collection("bookings");
+        const gadgetsCollection = client.db("carResaleMarket").collection("gadgets");
+
+        // -----------------------gadgets------------
+
+        app.get("/gadgets", async (req, res) => {
+            const filter = {};
+            const result = await gadgetsCollection.find(filter).toArray();
+            res.send(result);
+        });
+
         // ---------------------products api-----------------------------
 
         app.get("/carCategory", async (req, res) => {
@@ -51,7 +61,7 @@ async function run() {
         });
 
         app.get("/products/:category/:_id", async (req, res) => {
-            const category = req.params.category;
+            // const category = req.params.category;
             const id = req.params._id;
             // console.log(category, id);
             const filter = { _id: ObjectId(id) };
@@ -59,7 +69,16 @@ async function run() {
             res.send(result);
         });
 
-        // ------------------------bookings api-------------------
+        // ------------------------bookings api---------------------
+        app.get("/bookings/:email", async (req, res) => {
+            const email = req.params.email;
+            // const email = "rafi@gmail.com";
+            // console.log(email);
+            const query = { email };
+            const user = await bookingsCollection.find(query).toArray();
+            res.send(user);
+        });
+
         app.post("/bookings", async (req, res) => {
             const booking = req.body;
             // console.log(user);
@@ -108,6 +127,13 @@ async function run() {
                 },
             };
             const result = await usersCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        });
+
+        app.delete("/buyers/:id", async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await usersCollection.deleteOne(filter);
             res.send(result);
         });
 
