@@ -72,9 +72,14 @@ async function run() {
         // ------------------------bookings api---------------------
         app.get("/bookings/:email", async (req, res) => {
             const email = req.params.email;
-            // const email = "rafi@gmail.com";
-            // console.log(email);
             const query = { email };
+            const user = await bookingsCollection.find(query).toArray();
+            res.send(user);
+        });
+
+        app.get("/bookingOrder/:email", async (req, res) => {
+            const email = req.params.email;
+            const query = { sellerEmail: email };
             const user = await bookingsCollection.find(query).toArray();
             res.send(user);
         });
