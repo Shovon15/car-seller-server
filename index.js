@@ -107,6 +107,13 @@ async function run() {
 
         // --------------------------admin access api--------------------------
 
+        app.get("/users/admin/:email", async (req, res) => {
+            const email = req.params.email;
+            const query = { email };
+            const user = await usersCollection.findOne(query);
+            res.send({ isAdmin: user?.userRole === "admin" });
+        });
+
         app.get("/buyers", async (req, res) => {
             const query = { userRole: "buyer" };
             const users = await usersCollection.find(query).toArray();
@@ -127,6 +134,13 @@ async function run() {
                 },
             };
             const result = await usersCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        });
+
+        app.delete("/users/:id", async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await usersCollection.deleteOne(filter);
             res.send(result);
         });
 
