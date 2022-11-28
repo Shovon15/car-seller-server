@@ -60,6 +60,14 @@ async function run() {
             res.send(result);
         });
 
+        app.get("/sellerPost/:email", async (req, res) => {
+            const email = req.params.email;
+            // console.log(email);
+            const filter = { sellerEmail: email };
+            const result = await productsCollection.find(filter).toArray();
+            res.send(result);
+        });
+
         app.get("/products/:category/:_id", async (req, res) => {
             // const category = req.params.category;
             const id = req.params._id;
@@ -153,6 +161,13 @@ async function run() {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const result = await usersCollection.deleteOne(filter);
+            res.send(result);
+        });
+
+        app.delete("/sellerPost/:id", async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await productsCollection.deleteOne(filter);
             res.send(result);
         });
 
