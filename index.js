@@ -145,12 +145,14 @@ async function run() {
     // });
 
     app.post("/search", async (req, res) => {
-      const categoryName = req.body.categoryName;
-      const modelName = req.body.modelName;
+      const categoryName = req.body.values.categoryName;
+      const modelName = req.body.values.modelName;
       // console.log(req.body);
-      const modelYear = req.body.modelYear;
-      const condition = req.body.condition;
-      const color = req.body.color;
+      const modelYear = req.body.values.modelYear;
+      const condition = req.body.values.condition;
+      const color = req.body.values.color;
+      const limit = req.body.limit || 8;
+      // console.log(req.body.limit);
 
       const cursor = productsCollection.find({
         $and: [
@@ -161,7 +163,7 @@ async function run() {
           { color: { $regex: color, $options: "i" } },
         ],
       });
-      const result = await cursor.toArray();
+      const result = await cursor.limit(limit).toArray();
       // console.log(result);
 
       res.send(result);
@@ -173,23 +175,34 @@ async function run() {
       const comments = req.body;
       const result = await commentsCollection.insertOne(comments);
       res.send(result);
-  });
+    });
 
-  app.get("/comments/:_id", async (req, res) => {
-    const id = req.params._id;
-    // console.log(id);
-    // const postId = {};
-    const filter = { postId: id };
-    const sort = { date: -1 };
-    const result = await commentsCollection.find(filter).sort(sort).toArray();
-    res.send(result);
-});
+    app.get("/comments/:_id", async (req, res) => {
+      const id = req.params._id;
+      // console.log(id);
+      // const postId = {};
+      const filter = { postId: id };
+      const sort = { date: -1 };
+      const result = await commentsCollection.find(filter).sort(sort).toArray();
+      res.send(result);
+    });
+    app.get("/rating/:_id", async (req, res) => {
+      const id = req.params._id;
+      const filter = { postId: id };
 
-app.get("/comments", async (req, res) => {
-    const filter = {};
-    const result = await commentsCollection.find(filter).toArray();
-    res.send(result);
-});
+      const result = await commentsCollection.find(filter).toArray();
+      const specificProperty = result.map((comment) => comment.rating);
+      const sum = specificProperty.reduce((acc, value) => acc + value, 0);
+      const rating = sum / specificProperty.length;
+      // console.log(specificProperty, average);
+      res.send({ rating });
+    });
+
+    app.get("/comments", async (req, res) => {
+      const filter = {};
+      const result = await commentsCollection.find(filter).toArray();
+      res.send(result);
+    });
     // ---------------------------------------------------------------------------
 
     // ------------------------bookings api---------------------
@@ -272,8 +285,9 @@ app.get("/comments", async (req, res) => {
       const users = await usersCollection.find(query).toArray();
       res.send(users);
     });
-    app.put("/users/:id", async (req, res) => {
+    app.put("/user/:id", async (req, res) => {
       const id = req.params.id;
+      // console.log(id);
       const filter = { _id: ObjectId(id) };
       const options = { upsert: true };
       const updatedDoc = {
