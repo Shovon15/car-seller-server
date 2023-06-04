@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-// const jwt = require("jsonwebtoken");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 // const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 // import { Users } from ;
@@ -22,6 +22,26 @@ const client = new MongoClient(uri, {
 });
 // console.log(uri);
 
+const verifyJWT = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  // console.log(authorization);
+  if (!authorization) {
+    return res
+      .status(401)
+      .send({ error: true, message: "unauthorized access" });
+  }
+  const token = authorization.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res
+        .status(401)
+        .send({ error: true, message: "unauthorized access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
 async function run() {
   try {
     const usersCollection = client.db("carResaleMarket").collection("users");
@@ -41,6 +61,30 @@ async function run() {
       .db("carResaleMarket")
       .collection("gadgets");
 
+    // -----------------------JWT------------
+    app.get("/jwt", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      // console.log(user);
+      if (user) {
+        const token = jwt.sign({ email }, process.env.ACCESS_TOKEN_SECRET, {
+          expiresIn: "10h",
+        });
+        return res.send({ accessToken: token });
+      }
+      res.status(403).send({ accessToken: "" });
+    });
+
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      // console.log(user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      // console.log(token);
+      res.send({ token });
+    });
     // -----------------------gadgets------------
 
     app.get("/gadgets", async (req, res) => {
@@ -206,8 +250,14 @@ async function run() {
     // ---------------------------------------------------------------------------
 
     // ------------------------bookings api---------------------
-    app.get("/bookings/:email", async (req, res) => {
+    app.get("/bookings/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
+      const decodedEmail = req.decoded.email;
+
+      if (email !== decodedEmail) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
       const query = { email };
       const user = await bookingsCollection.find(query).toArray();
       res.send(user);
