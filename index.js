@@ -13,6 +13,8 @@ const app = express();
 // middleware
 app.use(cors());
 app.use(express.json());
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+// console.log(process.env.STRIPE_SECRET_KEY, "stripe");
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.jallqro.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
@@ -60,6 +62,10 @@ async function run() {
     const gadgetsCollection = client
       .db("carResaleMarket")
       .collection("gadgets");
+    const paymentsCollection = client
+      .db("carResaleMarket")
+      .collection("payments");
+    const blogCollection = client.db("carResaleMarket").collection("blogs");
 
     // -----------------------JWT------------
     app.get("/jwt", async (req, res) => {
@@ -196,6 +202,7 @@ async function run() {
       const condition = req.body.values.condition;
       const color = req.body.values.color;
       const limit = req.body.limit || 8;
+      const sort = { date: -1 };
       // console.log(req.body.limit);
 
       const cursor = productsCollection.find({
@@ -207,7 +214,7 @@ async function run() {
           { color: { $regex: color, $options: "i" } },
         ],
       });
-      const result = await cursor.limit(limit).toArray();
+      const result = await cursor.limit(limit).sort(sort).toArray();
       // console.log(result);
 
       res.send(result);
@@ -278,15 +285,82 @@ async function run() {
       const result = await bookingsCollection.insertOne(booking);
       res.send(result);
     });
+    // ------------------------------------payment api-----------------------
+
+    app.get("/booking/:id", async (req, res) => {
+      // const category = req.params.category;
+      const id = req.params.id;
+      // console.log(category, id);
+      const query = { _id: ObjectId(id) };
+      const result = await bookingsCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.post("/create-payment-intent", async (req, res) => {
+      // const { items } = req.body;
+      const booking = req.body;
+      const price = booking.price;
+      const amount = price;
+      // console.log(price);
+
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+        // automatic_payment_methods: {
+        //   enabled: true,
+        // },
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const result = await paymentsCollection.insertOne(payment);
+      const id = payment.bookingId;
+      const filter = { _id: ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          paid: true,
+          transactionId: payment.transactionId,
+        },
+      };
+      const updatedResult = await bookingsCollection.updateOne(
+        filter,
+        updatedDoc
+      );
+      res.send(result);
+    });
 
     // ---------------------users api-----------------------------
+    // app.post("/users", async (req, res) => {
+    //   const user = req.body;
+    //   // console.log(user);
+    //   // TODO: make sure you do not enter duplicate user email
+    //   // only insert users if the user doesn't exist in the database
+    //   const result = await usersCollection.insertOne(user);
+    //   res.send(result);
+    // });
+
     app.post("/users", async (req, res) => {
       const user = req.body;
-      // console.log(user);
-      // TODO: make sure you do not enter duplicate user email
-      // only insert users if the user doesn't exist in the database
-      const result = await usersCollection.insertOne(user);
-      res.send(result);
+      const email = user.email;
+
+      // Check if the user with the same email already exists
+      const existingUser = await usersCollection.findOne({ email });
+      console.log(existingUser);
+      if (existingUser) {
+        return res.send(existingUser);
+      } else {
+        const result = await usersCollection.insertOne(user);
+        res.send(result);
+      }
+
+      // Insert the user if no duplicate email is found
     });
 
     app.get("/users/:email", async (req, res) => {
@@ -313,6 +387,19 @@ async function run() {
         },
       };
       const result = await usersCollection.updateOne(query, updatedDoc, option);
+      res.send(result);
+    });
+
+    // ---------------------------blog api-------------------------------
+    app.get("/blogs", async (req, res) => {
+      const filter = {};
+      const result = await blogCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    app.post("/blogs", async (req, res) => {
+      const product = req.body;
+      const result = await blogCollection.insertOne(product);
       res.send(result);
     });
 
