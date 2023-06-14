@@ -201,7 +201,7 @@ async function run() {
       const modelYear = req.body.values.modelYear;
       const condition = req.body.values.condition;
       const color = req.body.values.color;
-      const limit = req.body.limit || 8;
+      const limit = req.body.limit || 10;
       const sort = { date: -1 };
       // console.log(req.body.limit);
 
@@ -393,7 +393,8 @@ async function run() {
     // ---------------------------blog api-------------------------------
     app.get("/blogs", async (req, res) => {
       const filter = {};
-      const result = await blogCollection.find(filter).toArray();
+      const sort = { date: -1 };
+      const result = await blogCollection.find(filter).sort(sort).toArray();
       res.send(result);
     });
 
